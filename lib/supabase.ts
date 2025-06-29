@@ -7,12 +7,12 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables")
 }
 
-// Singleton pattern for client-side Supabase client to prevent multiple instances
-let supabaseInstance: ReturnType<typeof createClient> | null = null
+// Single instance to prevent multiple GoTrueClient warnings
+let clientInstance: ReturnType<typeof createClient> | null = null
 
 export const supabase = (() => {
   if (typeof window === "undefined") {
-    // Server-side: create new instance each time
+    // Server-side: create new instance
     return createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: false,
@@ -23,30 +23,19 @@ export const supabase = (() => {
   }
 
   // Client-side: use singleton
-  if (!supabaseInstance) {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+  if (!clientInstance) {
+    clientInstance = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
         storage: window.localStorage,
-        storageKey: "sb-auth-token",
+        storageKey: "sb-returns-auth",
       },
     })
   }
-  return supabaseInstance
+  return clientInstance
 })()
-
-// Server client for API routes
-export function createServerClient() {
-  return createClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-      detectSessionInUrl: false,
-    },
-  })
-}
 
 // Database types
 export interface Database {

@@ -28,6 +28,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   const checkDemoSession = () => {
+    if (typeof window === "undefined") return null
+
     try {
       const demoSession = localStorage.getItem("demo_session")
       if (demoSession) {
@@ -40,7 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error) {
       console.error("Error checking demo session:", error)
-      localStorage.removeItem("demo_session")
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("demo_session")
+      }
     }
     return null
   }
@@ -111,7 +115,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signOut = async () => {
     try {
       // Clear demo session
-      localStorage.removeItem("demo_session")
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("demo_session")
+      }
 
       // Sign out from Supabase
       await supabase.auth.signOut()
@@ -127,7 +133,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Initial user check
     refreshUser()
 
-    // Listen for auth changes (but not for demo sessions)
+    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {

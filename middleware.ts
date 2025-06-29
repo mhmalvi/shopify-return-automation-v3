@@ -6,49 +6,47 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   const pathname = req.nextUrl.pathname
 
-  // Skip middleware for static files and API routes
+  // Skip middleware for static files, API routes, and specific paths
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/static") ||
-    pathname.includes(".")
+    pathname.includes(".") ||
+    pathname === "/favicon.ico"
   ) {
     return res
   }
 
   try {
-    // Check for demo session in localStorage (we'll handle this client-side)
-    // For middleware, we'll be more permissive
-
-    // Create Supabase client
+    // Create Supabase client for middleware
     const supabase = createMiddlewareClient({ req, res })
 
-    // Get session
+    // Get current session
     const {
       data: { session },
     } = await supabase.auth.getSession()
 
-    // Protected routes that require authentication
+    // Define route types
     const protectedRoutes = ["/admin", "/dashboard", "/settings"]
-    const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
-
-    // Auth routes that should redirect if already authenticated
     const authRoutes = ["/auth"]
-    const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route) && pathname !== "/auth/reset-password")
+    const publicRoutes = ["/", "/returns"]
 
-    if (isProtectedRoute && !session) {
-      // Allow demo access by checking if it's a demo request
-      const isDemoRequest = req.headers.get("x-demo-session") === "true"
+    const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
+    const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
+    const isPublicRoute = publicRoutes.some((route) => pathname === route || pathname.startsWith(route))
 
-      if (!isDemoRequest) {
+    // Handle protected routes
+    if (isProtectedRoute) {
+      if (!session) {
+        // Check for demo session (we'll handle this more gracefully)
         const redirectUrl = new URL("/auth", req.url)
         redirectUrl.searchParams.set("redirectTo", pathname)
         return NextResponse.redirect(redirectUrl)
       }
     }
 
-    if (isAuthRoute && session) {
-      // User is already authenticated, redirect to admin
+    // Handle auth routes when already authenticated
+    if (isAuthRoute && session && pathname !== "/auth/reset-password") {
       const redirectTo = req.nextUrl.searchParams.get("redirectTo") || "/admin"
       return NextResponse.redirect(new URL(redirectTo, req.url))
     }

@@ -1,21 +1,36 @@
 -- Create demo merchant
-INSERT INTO merchants (id, shop_domain, name, webhook_verified, created_at, updated_at)
-VALUES (
+INSERT INTO merchants (
+  id,
+  shop_domain,
+  name,
+  access_token,
+  webhook_verified,
+  created_at,
+  updated_at
+) VALUES (
   '550e8400-e29b-41d4-a716-446655440000',
   'demo-store.myshopify.com',
   'Demo Store',
+  'demo_access_token_12345',
   true,
   NOW(),
   NOW()
 ) ON CONFLICT (id) DO UPDATE SET
   shop_domain = EXCLUDED.shop_domain,
   name = EXCLUDED.name,
+  access_token = EXCLUDED.access_token,
   webhook_verified = EXCLUDED.webhook_verified,
   updated_at = NOW();
 
 -- Create demo user
-INSERT INTO users (id, email, merchant_id, role, created_at, updated_at)
-VALUES (
+INSERT INTO users (
+  id,
+  email,
+  merchant_id,
+  role,
+  created_at,
+  updated_at
+) VALUES (
   '550e8400-e29b-41d4-a716-446655440001',
   'admin@demo-store.com',
   '550e8400-e29b-41d4-a716-446655440000',
@@ -29,38 +44,47 @@ VALUES (
   updated_at = NOW();
 
 -- Create some demo returns
-INSERT INTO returns (id, merchant_id, order_id, customer_email, status, reason, items, created_at, updated_at)
-VALUES 
+INSERT INTO returns (
+  id,
+  merchant_id,
+  order_id,
+  customer_email,
+  status,
+  reason,
+  items,
+  created_at,
+  updated_at
+) VALUES 
 (
-  '550e8400-e29b-41d4-a716-446655440010',
+  '660e8400-e29b-41d4-a716-446655440001',
   '550e8400-e29b-41d4-a716-446655440000',
   '1001',
   'customer@example.com',
   'pending',
-  'Item doesn''t fit',
-  '[{"id": "1", "title": "Premium T-Shirt", "quantity": 1, "reason": "Too small"}]'::jsonb,
+  'Item damaged during shipping',
+  '[{"id": "1", "title": "Premium T-Shirt", "quantity": 1, "price": "29.99", "reason": "damaged"}]'::jsonb,
   NOW() - INTERVAL '2 days',
   NOW() - INTERVAL '2 days'
 ),
 (
-  '550e8400-e29b-41d4-a716-446655440011',
+  '660e8400-e29b-41d4-a716-446655440002',
   '550e8400-e29b-41d4-a716-446655440000',
   '1002',
   'customer2@example.com',
   'approved',
-  'Defective item',
-  '[{"id": "2", "title": "Cotton Hoodie", "quantity": 1, "reason": "Hole in fabric"}]'::jsonb,
+  'Wrong size ordered',
+  '[{"id": "2", "title": "Cotton Hoodie", "quantity": 1, "price": "69.99", "reason": "wrong_size"}]'::jsonb,
   NOW() - INTERVAL '1 day',
   NOW() - INTERVAL '1 day'
 ),
 (
-  '550e8400-e29b-41d4-a716-446655440012',
+  '660e8400-e29b-41d4-a716-446655440003',
   '550e8400-e29b-41d4-a716-446655440000',
   '1003',
   'customer3@example.com',
   'completed',
-  'Changed mind',
-  '[{"id": "3", "title": "Denim Jeans", "quantity": 1, "reason": "No longer needed"}]'::jsonb,
+  'Product not as described',
+  '[{"id": "3", "title": "Wireless Headphones", "quantity": 1, "price": "89.99", "reason": "not_as_described"}]'::jsonb,
   NOW() - INTERVAL '5 days',
   NOW() - INTERVAL '1 day'
 )

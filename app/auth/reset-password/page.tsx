@@ -1,7 +1,5 @@
 "use client"
 
-import type React from "react"
-
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,10 +25,10 @@ export default function ResetPasswordPage() {
   })
 
   // Check if we have a reset token in the URL
-  const accessToken = searchParams.get("access_token")
-  const refreshToken = searchParams.get("refresh_token")
+  const token = searchParams.get("token")
+  const type = searchParams.get("type")
 
-  const handleRequestReset = async (e: React.FormEvent) => {
+  const handleRequestReset = async (e) => {
     e.preventDefault()
     setLoading(true)
 
@@ -45,7 +43,7 @@ export default function ResetPasswordPage() {
         title: "Reset Email Sent",
         description: "Check your email for password reset instructions.",
       })
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
         description: error.message,
@@ -56,7 +54,7 @@ export default function ResetPasswordPage() {
     }
   }
 
-  const handlePasswordReset = async (e: React.FormEvent) => {
+  const handlePasswordReset = async (e) => {
     e.preventDefault()
 
     if (formData.password !== formData.confirmPassword) {
@@ -71,7 +69,7 @@ export default function ResetPasswordPage() {
     if (formData.password.length < 6) {
       toast({
         title: "Error",
-        description: "Password must be at least 6 characters long",
+        description: "Password must be at least 6 characters",
         variant: "destructive",
       })
       return
@@ -91,11 +89,9 @@ export default function ResetPasswordPage() {
         description: "Your password has been successfully updated.",
       })
 
-      // Redirect to login
-      setTimeout(() => {
-        router.push("/auth")
-      }, 2000)
-    } catch (error: any) {
+      // Redirect to admin after successful password reset
+      router.push("/admin")
+    } catch (error) {
       toast({
         title: "Error",
         description: error.message,
@@ -117,12 +113,12 @@ export default function ResetPasswordPage() {
             </div>
             <span className="text-2xl font-bold text-gray-900">Returns Automation</span>
           </div>
-          <p className="text-gray-600">Reset your password</p>
+          <p className="text-gray-600">{step === "request" ? "Reset your password" : "Set your new password"}</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>{step === "request" ? "Reset Password" : "Set New Password"}</CardTitle>
+            <CardTitle>{step === "request" ? "Forgot Password" : "Reset Password"}</CardTitle>
             <CardDescription>
               {step === "request"
                 ? "Enter your email address and we'll send you a reset link"
@@ -146,7 +142,7 @@ export default function ResetPasswordPage() {
 
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  Send Reset Email
+                  Send Reset Link
                 </Button>
               </form>
             ) : (
@@ -184,7 +180,7 @@ export default function ResetPasswordPage() {
               </form>
             )}
 
-            <div className="mt-4 text-center">
+            <div className="mt-6 text-center">
               <Link href="/auth" className="text-sm text-blue-600 hover:underline">
                 Back to Sign In
               </Link>
@@ -198,8 +194,8 @@ export default function ResetPasswordPage() {
               <Alert>
                 <CheckCircle className="h-4 w-4" />
                 <AlertDescription>
-                  <strong>Note:</strong> If you don't receive an email within a few minutes, please check your spam
-                  folder.
+                  <strong>Demo Note:</strong> Password reset emails work with real email addresses. For demo purposes,
+                  use the Quick Demo button on the sign-in page.
                 </AlertDescription>
               </Alert>
             </CardContent>
