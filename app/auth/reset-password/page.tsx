@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,12 +18,28 @@ export default function ResetPasswordPage() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState<"request" | "reset">(searchParams.get("code") ? "reset" : "request")
+  const [mode, setMode] = useState<"request" | "reset">("request")
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
   })
+
+  useEffect(() => {
+    // Check if we have access_token and refresh_token in URL (password reset flow)
+    const accessToken = searchParams.get("access_token")
+    const refreshToken = searchParams.get("refresh_token")
+    const type = searchParams.get("type")
+
+    if (accessToken && refreshToken && type === "recovery") {
+      setMode("reset")
+      // Set the session with the tokens
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      })
+    }
+  }, [searchParams])
 
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,7 +54,7 @@ export default function ResetPasswordPage() {
 
       toast({
         title: "Reset Email Sent",
-        description: "Check your email for password reset instructions.",
+        description: "Please check your email for password reset instructions.",
       })
     } catch (error: any) {
       toast({
@@ -57,7 +73,7 @@ export default function ResetPasswordPage() {
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Error",
-        description: "Passwords do not match.",
+        description: "Passwords do not match",
         variant: "destructive",
       })
       return
@@ -66,7 +82,7 @@ export default function ResetPasswordPage() {
     if (formData.password.length < 6) {
       toast({
         title: "Error",
-        description: "Password must be at least 6 characters long.",
+        description: "Password must be at least 6 characters long",
         variant: "destructive",
       })
       return
@@ -86,7 +102,8 @@ export default function ResetPasswordPage() {
         description: "Your password has been successfully updated.",
       })
 
-      router.push("/auth")
+      // Redirect to admin after successful password reset
+      router.push("/admin")
     } catch (error: any) {
       toast({
         title: "Error",
@@ -114,12 +131,7 @@ export default function ResetPasswordPage() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center space-x-2">
-              <Link href="/auth" className="text-gray-500 hover:text-gray-700">
-                <ArrowLeft className="w-4 h-4" />
-              </Link>
-              <CardTitle>{mode === "request" ? "Forgot Password" : "Reset Password"}</CardTitle>
-            </div>
+            <CardTitle>{mode === "request" ? "Forgot Password" : "Reset Password"}</CardTitle>
             <CardDescription>
               {mode === "request"
                 ? "Enter your email address and we'll send you a reset link"
@@ -182,7 +194,8 @@ export default function ResetPasswordPage() {
             )}
 
             <div className="mt-4 text-center">
-              <Link href="/auth" className="text-sm text-blue-600 hover:underline">
+              <Link href="/auth" className="inline-flex items-center text-sm text-blue-600 hover:underline">
+                <ArrowLeft className="w-4 h-4 mr-1" />
                 Back to Sign In
               </Link>
             </div>

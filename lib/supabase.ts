@@ -9,14 +9,22 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables")
 }
 
-// Client-side Supabase client (singleton pattern)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-})
+// Singleton pattern for client-side Supabase client
+let supabaseInstance: ReturnType<typeof createClient> | null = null
+
+export const supabase = (() => {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storage: typeof window !== "undefined" ? window.localStorage : undefined,
+      },
+    })
+  }
+  return supabaseInstance
+})()
 
 // Server-side Supabase client for components
 export const createServerClient = () => {
@@ -29,7 +37,7 @@ export const createClientClient = () => {
   return createClientComponentClient()
 }
 
-// Database types (you can generate these with `supabase gen types typescript`)
+// Database types
 export interface Database {
   public: {
     Tables: {
