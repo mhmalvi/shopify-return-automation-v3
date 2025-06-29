@@ -1,13 +1,13 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Loader2, RefreshCw, ArrowLeft } from "lucide-react"
 import { supabase } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
@@ -18,22 +18,12 @@ export default function ResetPasswordPage() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [step, setStep] = useState<"request" | "reset">("request")
+  const [mode, setMode] = useState<"request" | "reset">(searchParams.get("code") ? "reset" : "request")
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
   })
-
-  // Check if we have access token from email link
-  const accessToken = searchParams.get("access_token")
-  const refreshToken = searchParams.get("refresh_token")
-
-  useState(() => {
-    if (accessToken && refreshToken) {
-      setStep("reset")
-    }
-  }, [accessToken, refreshToken])
 
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -48,7 +38,7 @@ export default function ResetPasswordPage() {
 
       toast({
         title: "Reset Email Sent",
-        description: "Please check your email for password reset instructions.",
+        description: "Check your email for password reset instructions.",
       })
     } catch (error: any) {
       toast({
@@ -61,13 +51,13 @@ export default function ResetPasswordPage() {
     }
   }
 
-  const handleResetPassword = async (e: React.FormEvent) => {
+  const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (formData.password !== formData.confirmPassword) {
       toast({
         title: "Error",
-        description: "Passwords do not match",
+        description: "Passwords do not match.",
         variant: "destructive",
       })
       return
@@ -76,7 +66,7 @@ export default function ResetPasswordPage() {
     if (formData.password.length < 6) {
       toast({
         title: "Error",
-        description: "Password must be at least 6 characters long",
+        description: "Password must be at least 6 characters long.",
         variant: "destructive",
       })
       return
@@ -119,23 +109,28 @@ export default function ResetPasswordPage() {
             </div>
             <span className="text-2xl font-bold text-gray-900">Returns Automation</span>
           </div>
-          <p className="text-gray-600">Reset your password</p>
+          <p className="text-gray-600">{mode === "request" ? "Reset your password" : "Set your new password"}</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>{step === "request" ? "Reset Password" : "Set New Password"}</CardTitle>
+            <div className="flex items-center space-x-2">
+              <Link href="/auth" className="text-gray-500 hover:text-gray-700">
+                <ArrowLeft className="w-4 h-4" />
+              </Link>
+              <CardTitle>{mode === "request" ? "Forgot Password" : "Reset Password"}</CardTitle>
+            </div>
             <CardDescription>
-              {step === "request"
+              {mode === "request"
                 ? "Enter your email address and we'll send you a reset link"
                 : "Enter your new password below"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {step === "request" ? (
+            {mode === "request" ? (
               <form onSubmit={handleRequestReset} className="space-y-4">
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email Address</Label>
                   <Input
                     id="email"
                     type="email"
@@ -152,7 +147,7 @@ export default function ResetPasswordPage() {
                 </Button>
               </form>
             ) : (
-              <form onSubmit={handleResetPassword} className="space-y-4">
+              <form onSubmit={handlePasswordReset} className="space-y-4">
                 <div>
                   <Label htmlFor="password">New Password</Label>
                   <Input
@@ -187,13 +182,25 @@ export default function ResetPasswordPage() {
             )}
 
             <div className="mt-4 text-center">
-              <Link href="/auth" className="inline-flex items-center text-sm text-blue-600 hover:underline">
-                <ArrowLeft className="w-4 h-4 mr-1" />
+              <Link href="/auth" className="text-sm text-blue-600 hover:underline">
                 Back to Sign In
               </Link>
             </div>
           </CardContent>
         </Card>
+
+        {mode === "request" && (
+          <Card className="mt-4">
+            <CardContent className="pt-6">
+              <Alert>
+                <AlertDescription>
+                  <strong>Note:</strong> If you don't receive an email within a few minutes, please check your spam
+                  folder.
+                </AlertDescription>
+              </Alert>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )
