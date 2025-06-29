@@ -16,51 +16,47 @@ export async function middleware(req: NextRequest) {
     return res
   }
 
-  // Check for demo session in cookies or headers
-  const demoSession = req.cookies.get("demo_session")?.value
-  let isDemoUser = false
+  try {
+    // Check for demo session in headers (client-side will send this)
+    const demoSession = req.headers.get("x-demo-session")
 
-  if (demoSession) {
-    try {
-      const session = JSON.parse(demoSession)
-      isDemoUser = session.expires_at > Date.now()
-    } catch (error) {
-      // Invalid demo session, ignore
+    // Create Supabase client
+    const supabase = createMiddlewareClient({ req, res })
+
+    // Get session
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+
+    // Protected routes that require authentication
+    const protectedRoutes = ["/admin", "/dashboard", "/settings"]
+    const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
+
+    // Auth routes that should redirect if already authenticated
+    const authRoutes = ["/auth", "/login", "/signup"]
+    const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
+
+    if (isProtectedRoute) {
+      // Check for demo session or real session
+      if (!session && !demoSession) {
+        const redirectUrl = new URL("/auth", req.url)
+        redirectUrl.searchParams.set("redirectTo", pathname)
+        return NextResponse.redirect(redirectUrl)
+      }
     }
+
+    if (isAuthRoute && (session || demoSession)) {
+      // User is already authenticated, redirect to admin
+      const redirectTo = req.nextUrl.searchParams.get("redirectTo") || "/admin"
+      return NextResponse.redirect(new URL(redirectTo, req.url))
+    }
+
+    return res
+  } catch (error) {
+    console.error("Middleware error:", error)
+    // On error, allow the request to continue
+    return res
   }
-
-  // Create Supabase client
-  const supabase = createMiddlewareClient({ req, res })
-
-  // Get session
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  const isAuthenticated = session?.user || isDemoUser
-
-  // Protected routes that require authentication
-  const protectedRoutes = ["/admin"]
-  const isProtectedRoute = protectedRoutes.some((route) => pathname.startsWith(route))
-
-  // Auth routes that should redirect if already authenticated
-  const authRoutes = ["/auth"]
-  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route))
-
-  if (isProtectedRoute && !isAuthenticated) {
-    // Redirect to auth with return URL
-    const redirectUrl = new URL("/auth", req.url)
-    redirectUrl.searchParams.set("redirectTo", pathname)
-    return NextResponse.redirect(redirectUrl)
-  }
-
-  if (isAuthRoute && isAuthenticated) {
-    // Redirect authenticated users away from auth pages
-    const redirectTo = req.nextUrl.searchParams.get("redirectTo") || "/admin"
-    return NextResponse.redirect(new URL(redirectTo, req.url))
-  }
-
-  return res
 }
 
 export const config = {
@@ -72,6 +68,6 @@ export const config = {
      * - favicon.ico (favicon file)
      * - public folder
      */
-    "/((?!_next/static|_next/image|favicon.ico|public|api).*)",
+    "/((?!_next/static|_next/image|favicon.ico|public/).*)",
   ],
 }
