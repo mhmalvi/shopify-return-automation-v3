@@ -1,77 +1,73 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { ShopifyService } from "@/lib/shopify-service"
+import { createServerClient } from "@/lib/supabase"
 
 export async function POST(request: NextRequest) {
   try {
-    const { orderNumber, merchantDomain } = await request.json()
+    const { orderNumber, email, merchantDomain } = await request.json()
 
-    if (!orderNumber || !merchantDomain) {
-      return NextResponse.json({ error: "Order number and merchant domain are required" }, { status: 400 })
+    if (!orderNumber || !email) {
+      return NextResponse.json({ error: "Order number and email are required" }, { status: 400 })
     }
 
-    // Handle demo environment - return mock data for demo-store
+    // Handle demo environment - return mock data immediately
     if (merchantDomain === "demo-store" || merchantDomain === "demo-store.myshopify.com") {
       const mockOrder = {
-        id: "5555555555555",
+        id: "5000000001",
         order_number: orderNumber,
-        email: "customer@example.com",
+        email: email,
         created_at: "2024-01-15T10:30:00Z",
         financial_status: "paid",
         fulfillment_status: "fulfilled",
         total_price: "89.99",
         currency: "USD",
         customer: {
-          id: "1111111111111",
-          email: "customer@example.com",
           first_name: "John",
           last_name: "Doe",
+          email: email,
         },
         line_items: [
           {
-            id: "2222222222222",
-            product_id: "3333333333333",
-            variant_id: "4444444444444",
-            title: "Premium T-Shirt",
-            variant_title: "Large / Blue",
+            id: "12345678901234567890",
+            name: "Premium Wireless Headphones",
             quantity: 1,
-            price: "29.99",
-            sku: "TSHIRT-L-BLUE",
-            fulfillment_status: "fulfilled",
-            properties: [],
+            price: "79.99",
+            sku: "PWH-001",
+            variant_title: "Black",
+            product_id: "7891011121314151617",
+            variant_id: "1819202122232425262",
           },
           {
-            id: "2222222222223",
-            product_id: "3333333333334",
-            variant_id: "4444444444445",
-            title: "Cotton Hoodie",
-            variant_title: "Medium / Gray",
-            quantity: 2,
-            price: "30.00",
-            sku: "HOODIE-M-GRAY",
-            fulfillment_status: "fulfilled",
-            properties: [],
+            id: "12345678901234567891",
+            name: "Shipping",
+            quantity: 1,
+            price: "10.00",
+            sku: "SHIPPING",
+            variant_title: null,
+            product_id: null,
+            variant_id: null,
           },
         ],
         shipping_address: {
           first_name: "John",
           last_name: "Doe",
-          address1: "123 Main St",
+          address1: "123 Main Street",
           address2: "Apt 4B",
           city: "New York",
           province: "NY",
-          country: "United States",
           zip: "10001",
+          country: "United States",
           phone: "+1-555-123-4567",
         },
         billing_address: {
           first_name: "John",
           last_name: "Doe",
-          address1: "123 Main St",
+          address1: "123 Main Street",
           address2: "Apt 4B",
           city: "New York",
           province: "NY",
-          country: "United States",
           zip: "10001",
+          country: "United States",
           phone: "+1-555-123-4567",
         },
       }
@@ -79,26 +75,35 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ order: mockOrder })
     }
 
-    // For real merchants, use Shopify API
-    const shopifyService = new ShopifyService(merchantDomain)
-    const order = await shopifyService.findOrderByNumber(orderNumber)
+    // For real merchants, fetch from database and Shopify
+    const supabase = createServerClient()
+
+    // Find merchant by domain
+    const { data: merchant, error: merchantError } = await supabase
+      .from("merchants")
+      .select("*")
+      .eq("shop_domain", merchantDomain)
+      .single()
+
+    if (merchantError || !merchant) {
+      return NextResponse.json({ error: "Merchant not found" }, { status: 404 })
+    }
+
+    if (!merchant.access_token) {
+      return NextResponse.json({ error: "Merchant not properly configured" }, { status: 400 })
+    }
+
+    // Use Shopify service to find the order
+    const shopifyService = new ShopifyService(merchant.shop_domain, merchant.access_token)
+    const order = await shopifyService.findOrderByNumber(orderNumber, email)
 
     if (!order) {
-      return NextResponse.json({ error: "Order not found" }, { status: 404 })
+      return NextResponse.json({ error: "Order not found or email doesn't match" }, { status: 404 })
     }
 
     return NextResponse.json({ order })
   } catch (error: any) {
     console.error("Order lookup error:", error)
-
-    // Return a more specific error message
-    if (error.message?.includes("Shopify API error")) {
-      return NextResponse.json(
-        { error: "Unable to connect to store. Please check your store domain." },
-        { status: 400 },
-      )
-    }
-
-    return NextResponse.json({ error: "Failed to lookup order" }, { status: 500 })
+    return NextResponse.json({ error: error.message || "Failed to lookup order" }, { status: 500 })
   }
 }

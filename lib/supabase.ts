@@ -1,6 +1,4 @@
 import { createClient } from "@supabase/supabase-js"
-import { createClientComponentClient, createServerComponentClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -9,32 +7,45 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables")
 }
 
-// Singleton pattern for client-side Supabase client
+// Singleton pattern for client-side Supabase client to prevent multiple instances
 let supabaseInstance: ReturnType<typeof createClient> | null = null
 
 export const supabase = (() => {
+  if (typeof window === "undefined") {
+    // Server-side: create new instance each time
+    return createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    })
+  }
+
+  // Client-side: use singleton
   if (!supabaseInstance) {
     supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true,
-        storage: typeof window !== "undefined" ? window.localStorage : undefined,
+        storage: window.localStorage,
+        storageKey: "sb-auth-token",
       },
     })
   }
   return supabaseInstance
 })()
 
-// Server-side Supabase client for components
-export const createServerClient = () => {
-  const cookieStore = cookies()
-  return createServerComponentClient({ cookies: () => cookieStore })
-}
-
-// Client-side Supabase client for components
-export const createClientClient = () => {
-  return createClientComponentClient()
+// Server client for API routes
+export function createServerClient() {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  })
 }
 
 // Database types

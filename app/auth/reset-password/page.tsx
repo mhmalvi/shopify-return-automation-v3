@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,30 +17,29 @@ export default function ResetPasswordPage() {
   const searchParams = useSearchParams()
   const { toast } = useToast()
   const [loading, setLoading] = useState(false)
-  const [mode, setMode] = useState<"request" | "reset">("request")
+  const [step, setStep] = useState<"request" | "reset">("request")
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
   })
 
-  useEffect(() => {
-    // Check if we have access_token and refresh_token in URL (password reset flow)
-    const accessToken = searchParams.get("access_token")
-    const refreshToken = searchParams.get("refresh_token")
-    const type = searchParams.get("type")
+  // Check if we have access token from email link
+  const accessToken = searchParams.get("access_token")
+  const refreshToken = searchParams.get("refresh_token")
 
-    if (accessToken && refreshToken && type === "recovery") {
-      setMode("reset")
-      // Set the session with the tokens
+  useState(() => {
+    if (accessToken && refreshToken) {
+      setStep("reset")
+      // Set the session from URL parameters
       supabase.auth.setSession({
         access_token: accessToken,
         refresh_token: refreshToken,
       })
     }
-  }, [searchParams])
+  }, [accessToken, refreshToken])
 
-  const handleRequestReset = async (e: React.FormEvent) => {
+  const handleRequestReset = async (e) => {
     e.preventDefault()
     setLoading(true)
 
@@ -56,7 +54,7 @@ export default function ResetPasswordPage() {
         title: "Reset Email Sent",
         description: "Please check your email for password reset instructions.",
       })
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Error",
         description: error.message,
@@ -67,7 +65,7 @@ export default function ResetPasswordPage() {
     }
   }
 
-  const handlePasswordReset = async (e: React.FormEvent) => {
+  const handlePasswordReset = async (e) => {
     e.preventDefault()
 
     if (formData.password !== formData.confirmPassword) {
@@ -102,9 +100,8 @@ export default function ResetPasswordPage() {
         description: "Your password has been successfully updated.",
       })
 
-      // Redirect to admin after successful password reset
-      router.push("/admin")
-    } catch (error: any) {
+      router.push("/auth")
+    } catch (error) {
       toast({
         title: "Error",
         description: error.message,
@@ -126,23 +123,23 @@ export default function ResetPasswordPage() {
             </div>
             <span className="text-2xl font-bold text-gray-900">Returns Automation</span>
           </div>
-          <p className="text-gray-600">{mode === "request" ? "Reset your password" : "Set your new password"}</p>
+          <p className="text-gray-600">{step === "request" ? "Reset your password" : "Set your new password"}</p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>{mode === "request" ? "Forgot Password" : "Reset Password"}</CardTitle>
+            <CardTitle>{step === "request" ? "Forgot Password" : "Reset Password"}</CardTitle>
             <CardDescription>
-              {mode === "request"
+              {step === "request"
                 ? "Enter your email address and we'll send you a reset link"
                 : "Enter your new password below"}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {mode === "request" ? (
+            {step === "request" ? (
               <form onSubmit={handleRequestReset} className="space-y-4">
                 <div>
-                  <Label htmlFor="email">Email Address</Label>
+                  <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
                     type="email"
@@ -202,13 +199,15 @@ export default function ResetPasswordPage() {
           </CardContent>
         </Card>
 
-        {mode === "request" && (
+        {step === "request" && (
           <Card className="mt-4">
             <CardContent className="pt-6">
               <Alert>
                 <AlertDescription>
-                  <strong>Note:</strong> If you don't receive an email within a few minutes, please check your spam
-                  folder.
+                  Remember your password?{" "}
+                  <Link href="/auth" className="text-blue-600 hover:underline">
+                    Sign in here
+                  </Link>
                 </AlertDescription>
               </Alert>
             </CardContent>
