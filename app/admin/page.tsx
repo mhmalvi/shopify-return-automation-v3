@@ -1,17 +1,32 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Label } from "@/components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Separator } from "@/components/ui/separator"
 import {
-  BarChart,
-  Bar,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  LineChart,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -20,68 +35,96 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
 } from "recharts"
 import {
-  ArrowUpRight,
   Package,
-  RefreshCw,
+  Users,
   DollarSign,
+  TrendingUp,
+  RefreshCw,
   Search,
+  Filter,
   Download,
-  CheckCircle,
-  XCircle,
+  Settings,
+  Bell,
   Sparkles,
   Loader2,
 } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 import { dataService, type ReturnWithDetails, type DashboardMetrics } from "@/lib/data-service"
+import { useAuth } from "@/lib/auth-context"
+import { useRouter } from "next/navigation"
 
-export default function AdminDashboard() {
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"]
+
+const returnsData: ReturnWithDetails[] = [
+  {
+    id: "1",
+    order_number: "#1001",
+    customer_email: "john.doe@example.com",
+    reason: "Defective item",
+    status: "pending",
+    created_at: "2024-01-20T14:30:00Z",
+    items: [{ product_name: "T-shirt", quantity: 1, price: 25 }],
+  },
+  {
+    id: "2",
+    order_number: "#1002",
+    customer_email: "jane.smith@example.com",
+    reason: "Wrong size",
+    status: "approved",
+    created_at: "2024-01-22T10:00:00Z",
+    items: [{ product_name: "Jeans", quantity: 1, price: 60 }],
+  },
+  {
+    id: "3",
+    order_number: "#1003",
+    customer_email: "alice.wang@example.com",
+    reason: "Changed mind",
+    status: "processed",
+    created_at: "2024-01-25T16:45:00Z",
+    items: [{ product_name: "Shoes", quantity: 1, price: 80 }],
+  },
+]
+
+const dashboardMetrics: DashboardMetrics = {
+  totalReturns: 150,
+  pendingReturns: 20,
+  processedReturns: 120,
+  totalRefunded: 5000,
+}
+
+export default function AdminPage() {
+  const router = useRouter()
+  const { user, loading: authLoading, signOut } = useAuth()
   const { toast } = useToast()
-  const [activeTab, setActiveTab] = useState("overview")
-  const [returns, setReturns] = useState<ReturnWithDetails[]>([])
-  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [loading, setLoading] = useState(false)
+  const [metrics, setMetrics] = useState<DashboardMetrics>(dashboardMetrics)
+  const [returns, setReturns] = useState<ReturnWithDetails[]>(returnsData)
   const [searchQuery, setSearchQuery] = useState("")
-  const [returnTrends, setReturnTrends] = useState<any[]>([])
-  const [returnReasons, setReturnReasons] = useState<any[]>([])
-  const [actionLoading, setActionLoading] = useState<string | null>(null)
-
-  // Use demo merchant ID - in real app, get from auth context
-  const merchantId = "550e8400-e29b-41d4-a716-446655440000"
+  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "processed">("all")
 
   useEffect(() => {
-    loadDashboardData()
-  }, [])
+    if (!user && !authLoading) {
+      router.push("/auth")
+    }
 
-  useEffect(() => {
-    loadReturns()
-  }, [statusFilter, searchQuery])
+    loadData()
+  }, [user, authLoading, router])
 
-  const loadDashboardData = async () => {
+  const loadData = async () => {
     setLoading(true)
     try {
-      // Load metrics
-      const metricsData = await dataService.getDashboardMetrics(merchantId)
-      setMetrics(metricsData)
-
-      // Load trend data
-      const trends = await dataService.getReturnTrends(merchantId, 30)
-      setReturnTrends(trends.slice(-7)) // Last 7 days
-
-      // Load return reasons
-      const reasons = await dataService.getReturnReasons(merchantId)
-      setReturnReasons(reasons)
-
-      // Load initial returns
-      await loadReturns()
+      // Simulate API calls
+      // const metricsData = await dataService.getDashboardMetrics()
+      // const returnsData = await dataService.getReturns()
+      // setMetrics(metricsData)
+      setMetrics(dashboardMetrics)
+      setReturns(returnsData)
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load dashboard data",
+        description: "Failed to load data",
         variant: "destructive",
       })
     } finally {
@@ -89,247 +132,216 @@ export default function AdminDashboard() {
     }
   }
 
-  const loadReturns = async () => {
+  const handleSignOut = async () => {
     try {
-      const { returns: returnsData } = await dataService.getReturns(merchantId, {
-        status: statusFilter,
-        search: searchQuery,
-        limit: 50,
-      })
-      setReturns(returnsData)
+      await signOut()
+      router.push("/auth")
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to load returns",
+        description: "Failed to sign out",
         variant: "destructive",
       })
     }
   }
 
-  const handleReturnAction = async (returnId: string, action: "approve" | "reject") => {
-    setActionLoading(returnId)
-    try {
-      const newStatus = action === "approve" ? "approved" : "rejected"
-      const success = await dataService.updateReturnStatus(returnId, newStatus, merchantId)
+  const filteredReturns = returns.filter((item) => {
+    const matchesSearch =
+      item.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.customer_email.toLowerCase().includes(searchQuery.toLowerCase())
 
-      if (success) {
-        // Update local state
-        setReturns(returns.map((ret) => (ret.id === returnId ? { ...ret, status: newStatus } : ret)))
+    const matchesStatus = filterStatus === "all" || item.status === filterStatus
 
-        toast({
-          title: "Success",
-          description: `Return ${action}d successfully`,
-        })
-      } else {
-        throw new Error(`Failed to ${action} return`)
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: `Failed to ${action} return`,
-        variant: "destructive",
-      })
-    } finally {
-      setActionLoading(null)
-    }
-  }
+    return matchesSearch && matchesStatus
+  })
 
-  const getStatusBadge = (status: string) => {
-    const colors = {
-      requested: "bg-yellow-100 text-yellow-800",
-      approved: "bg-green-100 text-green-800",
-      rejected: "bg-red-100 text-red-800",
-      in_transit: "bg-blue-100 text-blue-800",
-      completed: "bg-gray-100 text-gray-800",
-    } as const
-
-    return <Badge className={colors[status as keyof typeof colors]}>{status.replace("_", " ")}</Badge>
-  }
-
-  if (loading) {
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center space-x-2">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading dashboard...</span>
+          <span>Loading...</span>
         </div>
       </div>
     )
+  }
+
+  if (!user) {
+    return null // Handle unauthorized state appropriately
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
       <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Returns Dashboard</h1>
-              <p className="text-gray-600">Manage and optimize your returns process</p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-              <Button size="sm" onClick={loadDashboardData}>
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Refresh
-              </Button>
-            </div>
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <RefreshCw className="w-6 h-6 text-gray-500" />
+            <h1 className="text-lg font-semibold text-gray-900">Admin Dashboard</h1>
+          </div>
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost">
+              <Bell className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost">
+              <Settings className="w-4 h-4" />
+            </Button>
+            <Button onClick={handleSignOut} size="sm">
+              Sign Out
+            </Button>
           </div>
         </div>
       </header>
 
-      {/* Debug Panel - Remove in production */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-        <h3 className="font-medium text-yellow-900 mb-2">🔧 Debug Panel</h3>
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              try {
-                const response = await fetch("/api/debug/database")
-                const result = await response.json()
-                console.log("Database diagnostic:", result)
-                toast({
-                  title: "Database Diagnostic",
-                  description: `Connection: ${result.success ? "OK" : "Failed"}. Check console for details.`,
-                  variant: result.success ? "default" : "destructive",
-                })
-              } catch (error) {
-                console.error("Diagnostic failed:", error)
-              }
-            }}
-          >
-            🔍 Check Database
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              try {
-                const response = await fetch("/api/debug/seed", { method: "POST" })
-                const result = await response.json()
-                console.log("Seed result:", result)
-                if (result.success) {
-                  toast({
-                    title: "Data Seeded Successfully!",
-                    description: "Demo data has been inserted. Refreshing dashboard...",
-                  })
-                  // Refresh the dashboard data
-                  setTimeout(() => {
-                    loadDashboardData()
-                  }, 1000)
-                } else {
-                  throw new Error(result.error)
-                }
-              } catch (error) {
-                console.error("Seeding failed:", error)
-                toast({
-                  title: "Seeding Failed",
-                  description: "Check console for details",
-                  variant: "destructive",
-                })
-              }
-            }}
-          >
-            🌱 Seed Demo Data
-          </Button>
-        </div>
-        <p className="text-xs text-yellow-700 mt-2">
-          Use these tools to diagnose and fix database issues. Check browser console for detailed logs.
-        </p>
-      </div>
-
+      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="returns">Returns Management</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-          </TabsList>
-
-          {/* Overview Tab */}
-          <TabsContent value="overview" className="space-y-6">
-            {/* KPI Cards */}
-            {metrics && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Total Returns</CardTitle>
-                    <Package className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{metrics.totalReturns}</div>
-                    <p className="text-xs text-muted-foreground flex items-center">
-                      <ArrowUpRight className="h-3 w-3 mr-1 text-green-600" />+{metrics.totalReturnsChange}% from last
-                      month
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Exchange Rate</CardTitle>
-                    <RefreshCw className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{metrics.exchangeRate}%</div>
-                    <p className="text-xs text-muted-foreground flex items-center">
-                      <ArrowUpRight className="h-3 w-3 mr-1 text-green-600" />+{metrics.exchangeRateChange}% from last
-                      month
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">AI Acceptance</CardTitle>
-                    <Sparkles className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{metrics.aiAcceptanceRate}%</div>
-                    <p className="text-xs text-muted-foreground flex items-center">
-                      <ArrowUpRight className="h-3 w-3 mr-1 text-green-600" />+{metrics.aiAcceptanceRateChange}% from
-                      last month
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Revenue Saved</CardTitle>
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">${metrics.revenueSaved}</div>
-                    <p className="text-xs text-muted-foreground flex items-center">
-                      <ArrowUpRight className="h-3 w-3 mr-1 text-green-600" />+{metrics.revenueSavedChange}% from last
-                      month
-                    </p>
-                  </CardContent>
-                </Card>
+        {/* Overview Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Total Returns</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics.totalReturns}</div>
+              <div className="text-sm text-green-500 flex items-center">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                +12%
               </div>
-            )}
+            </CardContent>
+          </Card>
 
-            {/* Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Pending Returns</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics.pendingReturns}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Processed Returns</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics.processedReturns}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Total Refunded</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">${metrics.totalRefunded}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tabs */}
+        <Tabs defaultValue="returns" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="returns">Returns</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+          <TabsContent value="returns" className="space-y-4">
+            {/* Returns Table */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Input
+                  type="text"
+                  placeholder="Search orders..."
+                  className="max-w-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <Button variant="ghost" className="ml-2">
+                  <Search className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="processed">Processed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filter
+                </Button>
+              </div>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredReturns.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.order_number}</TableCell>
+                    <TableCell>{item.customer_email}</TableCell>
+                    <TableCell>{item.reason}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          item.status === "pending"
+                            ? "secondary"
+                            : item.status === "approved"
+                            ? "success"
+                            : "destructive"
+                        }
+                      >
+                        {item.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(item.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm">View Details</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-4">
+            {/* Analytics Charts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Return Trends</CardTitle>
-                  <CardDescription>Daily returns and exchanges over the last 7 days</CardDescription>
+                  <CardTitle>Returns Over Time</CardTitle>
+                  <CardDescription>Monthly return trends</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={returnTrends}>
+                    <LineChart data={[
+                      { month: "Jan", returns: 120 },
+                      { month: "Feb", returns: 90 },
+                      { month: "Mar", returns: 110 },
+                      { month: "Apr", returns: 130 },
+                      { month: "May", returns: 100 },
+                    ]}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" tickFormatter={(date) => new Date(date).toLocaleDateString()} />
+                      <XAxis dataKey="month" />
                       <YAxis />
-                      <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString()} />
-                      <Line type="monotone" dataKey="returns" stroke="#8884d8" name="Returns" />
-                      <Line type="monotone" dataKey="exchanges" stroke="#82ca9d" name="Exchanges" />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="returns" stroke="#8884d8" activeDot={{ r: 8 }} />
                     </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -338,24 +350,36 @@ export default function AdminDashboard() {
               <Card>
                 <CardHeader>
                   <CardTitle>Return Reasons</CardTitle>
-                  <CardDescription>Breakdown of why customers return items</CardDescription>
+                  <CardDescription>Distribution of return reasons</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={returnReasons}
+                        data={[
+                          { name: "Defective", value: 40 },
+                          { name: "Wrong Size", value: 30 },
+                          { name: "Changed Mind", value: 20 },
+                          { name: "Other", value: 10 },
+                        ]}
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name} ${percent !== undefined ? (percent * 100).toFixed(0) : 0}%`}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
                       >
-                        {returnReasons.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
+                        {
+                          [
+                            { name: "Defective", value: 40 },
+                            { name: "Wrong Size", value: 30 },
+                            { name: "Changed Mind", value: 20 },
+                            { name: "Other", value: 10 },
+                          ].map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))
+                        }
                       </Pie>
                       <Tooltip />
                     </PieChart>
@@ -365,191 +389,20 @@ export default function AdminDashboard() {
             </div>
           </TabsContent>
 
-          {/* Returns Management Tab */}
-          <TabsContent value="returns" className="space-y-6">
-            {/* Filters */}
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row gap-4">
-                  <div className="flex-1">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                      <Input
-                        placeholder="Search by email or order number..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="pl-10"
-                      />
-                    </div>
-                  </div>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Filter by status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Status</SelectItem>
-                      <SelectItem value="requested">Requested</SelectItem>
-                      <SelectItem value="approved">Approved</SelectItem>
-                      <SelectItem value="rejected">Rejected</SelectItem>
-                      <SelectItem value="in_transit">In Transit</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Returns Table */}
+          <TabsContent value="settings">
             <Card>
               <CardHeader>
-                <CardTitle>Return Requests</CardTitle>
-                <CardDescription>Manage and process customer return requests</CardDescription>
+                <CardTitle>Settings</CardTitle>
+                <CardDescription>Manage your store settings</CardDescription>
               </CardHeader>
               <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Customer</TableHead>
-                      <TableHead>Items</TableHead>
-                      <TableHead>Reason</TableHead>
-                      <TableHead>AI Suggestion</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {returns.map((returnItem) => (
-                      <TableRow key={returnItem.id}>
-                        <TableCell className="font-medium">#{returnItem.shopify_order_id}</TableCell>
-                        <TableCell>{returnItem.customer_email}</TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {returnItem.return_items.map((item, idx) => (
-                              <div key={idx}>
-                                {item.product_name} (x{item.quantity})
-                              </div>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>{returnItem.reason}</TableCell>
-                        <TableCell>
-                          {returnItem.ai_suggestions.length > 0 ? (
-                            <div className="flex items-center space-x-2">
-                              <Sparkles className="w-4 h-4 text-blue-600" />
-                              <div className="text-sm">
-                                <div className="font-medium">{returnItem.ai_suggestions[0].suggested_product_name}</div>
-                                <div className="text-gray-500">
-                                  {Math.round(returnItem.ai_suggestions[0].confidence_score * 100)}% confidence
-                                </div>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-gray-400">None</span>
-                          )}
-                        </TableCell>
-                        <TableCell>{getStatusBadge(returnItem.status)}</TableCell>
-                        <TableCell>${returnItem.total_amount}</TableCell>
-                        <TableCell>
-                          {returnItem.status === "requested" && (
-                            <div className="flex space-x-2">
-                              <Button
-                                size="sm"
-                                onClick={() => handleReturnAction(returnItem.id, "approve")}
-                                disabled={actionLoading === returnItem.id}
-                              >
-                                {actionLoading === returnItem.id ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <CheckCircle className="w-4 h-4 mr-1" />
-                                )}
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleReturnAction(returnItem.id, "reject")}
-                                disabled={actionLoading === returnItem.id}
-                              >
-                                <XCircle className="w-4 h-4 mr-1" />
-                                Reject
-                              </Button>
-                            </div>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-
-                {returns.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">No returns found matching your criteria</div>
-                )}
+                <Alert>
+                  <AlertDescription>
+                    This is a demo store. Settings are not editable.
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          {/* Analytics Tab */}
-          <TabsContent value="analytics" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Monthly Performance</CardTitle>
-                  <CardDescription>Returns vs Exchanges trend</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={returnTrends}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" tickFormatter={(date) => new Date(date).toLocaleDateString()} />
-                      <YAxis />
-                      <Tooltip labelFormatter={(date) => new Date(date).toLocaleDateString()} />
-                      <Bar dataKey="returns" fill="#8884d8" name="Returns" />
-                      <Bar dataKey="exchanges" fill="#82ca9d" name="Exchanges" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>AI Performance</CardTitle>
-                  <CardDescription>AI suggestion acceptance metrics</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Overall Acceptance Rate</span>
-                      <span className="text-2xl font-bold">{metrics?.aiAcceptanceRate || 0}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full"
-                        style={{ width: `${metrics?.aiAcceptanceRate || 0}%` }}
-                      ></div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <div className="text-gray-500">Suggestions Made</div>
-                        <div className="font-semibold">
-                          {returns.reduce((sum, ret) => sum + ret.ai_suggestions.length, 0)}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-gray-500">Accepted</div>
-                        <div className="font-semibold">
-                          {returns.reduce(
-                            (sum, ret) => sum + ret.ai_suggestions.filter((s) => s.accepted === true).length,
-                            0,
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </TabsContent>
         </Tabs>
       </main>
