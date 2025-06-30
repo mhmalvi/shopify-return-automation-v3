@@ -116,14 +116,14 @@ export class BillingService {
         expand: ["latest_invoice.payment_intent"],
       })
 
-      // Update billing record with correct property access
+      // Update billing record with correct property access using snake_case
       await this.supabase.from("billing_records").upsert({
         merchant_id: merchantId,
         plan_type: planId,
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
-        current_period_start: new Date(subscription.currentPeriodStart * 1000).toISOString(),
-        current_period_end: new Date(subscription.currentPeriodEnd * 1000).toISOString(),
+        current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+        current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
         usage_count: 0,
       })
 
@@ -218,8 +218,8 @@ export class BillingService {
       await this.supabase
         .from("billing_records")
         .update({
-          current_period_start: new Date(subscription.currentPeriodStart * 1000).toISOString(),
-          current_period_end: new Date(subscription.currentPeriodEnd * 1000).toISOString(),
+          current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
+          current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq("merchant_id", merchant.id)
