@@ -10,6 +10,13 @@ export interface EmailTemplate {
   from?: string
 }
 
+interface MerchantSettings {
+  brand_color?: string
+  logo_url?: string
+  return_policy?: string
+  notification_email?: string
+}
+
 export class EmailService {
   private static instance: EmailService
   private fromEmail = process.env.FROM_EMAIL || "noreply@returnsautomation.com"
@@ -48,10 +55,11 @@ export class EmailService {
   async sendMerchantNotification(returnData: Return, merchant: Merchant): Promise<boolean> {
     try {
       const template = this.generateMerchantNotificationTemplate(returnData, merchant)
+      const settings = merchant.settings as MerchantSettings
 
       const { data, error } = await resend.emails.send({
         from: this.fromEmail,
-        to: merchant.settings.notification_email || "admin@" + merchant.shop_domain,
+        to: settings.notification_email || "admin@" + merchant.shop_domain,
         subject: `New Return Request - Order #${returnData.shopify_order_id}`,
         html: template,
       })
@@ -124,8 +132,9 @@ export class EmailService {
   }
 
   private generateReturnConfirmationTemplate(returnData: Return, merchant: Merchant): string {
-    const brandColor = merchant.settings.brand_color || "#1D4ED8"
-    const logoUrl = merchant.settings.logo_url || ""
+    const settings = merchant.settings as MerchantSettings
+    const brandColor = settings.brand_color || "#1D4ED8"
+    const logoUrl = settings.logo_url || ""
 
     return `
       <!DOCTYPE html>

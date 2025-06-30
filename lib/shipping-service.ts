@@ -1,3 +1,4 @@
+
 import EasyPost from "@easypost/api"
 import type { Return, Merchant } from "./types"
 
@@ -24,6 +25,22 @@ export interface ShippingLabel {
   carrier: string
   service: string
   estimated_delivery_date?: string
+}
+
+interface MerchantSettings {
+  brand_color?: string
+  logo_url?: string
+  return_policy?: string
+  return_address?: {
+    name?: string
+    street1?: string
+    street2?: string
+    city?: string
+    state?: string
+    zip?: string
+    country?: string
+    phone?: string
+  }
 }
 
 export class ShippingService {
@@ -97,9 +114,7 @@ export class ShippingService {
       }
 
       // Buy the shipment
-      const boughtShipment = await easypost.Shipment.buy(shipment.id, {
-        rate: preferredRate,
-      })
+      const boughtShipment = await easypost.Shipment.buy(shipment.id, preferredRate.id)
 
       return {
         id: boughtShipment.id,
@@ -109,7 +124,7 @@ export class ShippingService {
         rate: Number.parseFloat(preferredRate.rate),
         carrier: preferredRate.carrier,
         service: preferredRate.service,
-        estimated_delivery_date: boughtShipment.selected_rate?.est_delivery_date,
+        estimated_delivery_date: boughtShipment.selected_rate?.delivery_date,
       }
     } catch (error) {
       console.error("Failed to generate return label:", error)
@@ -190,7 +205,7 @@ export class ShippingService {
 
   private getMerchantReturnAddress(merchant: Merchant): ShippingAddress {
     // Get return address from merchant settings or use default
-    const settings = merchant.settings
+    const settings = merchant.settings as MerchantSettings
 
     return {
       name: settings.return_address?.name || merchant.shop_domain,
