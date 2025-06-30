@@ -1,120 +1,426 @@
 
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/button'
-import { useAuth } from '../../lib/auth-context'
-import { Loader2, Package, Users, TrendingUp, DollarSign } from 'lucide-react'
+"use client"
 
-interface DashboardStats {
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
+import { Button } from "../../components/ui/button"
+import { Input } from "../../components/ui/input"
+import { Label } from "../../components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
+import { Badge } from "../../components/ui/badge"
+import { Alert, AlertDescription } from "../../components/ui/alert"
+import { Separator } from "../../components/ui/separator"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../../components/ui/table"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select"
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts"
+import {
+  Package,
+  Users,
+  DollarSign,
+  TrendingUp,
+  RefreshCw,
+  Search,
+  Filter,
+  Download,
+  Settings,
+  Bell,
+  Sparkles,
+  Loader2,
+} from "lucide-react"
+import { useToast } from "../../components/ui/use-toast"
+import { useAuth } from "../../lib/auth-context"
+import { useNavigate } from "react-router-dom"
+
+const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042"]
+
+interface ReturnWithDetails {
+  id: string
+  order_number: string
+  customer_email: string
+  reason: string
+  status: string
+  created_at: string
+  items: Array<{
+    product_name: string
+    quantity: number
+    price: number
+  }>
+}
+
+interface DashboardMetrics {
   totalReturns: number
   pendingReturns: number
-  totalMerchants: number
-  monthlyRevenue: number
+  processedReturns: number
+  totalRefunded: number
+}
+
+const returnsData: ReturnWithDetails[] = [
+  {
+    id: "1",
+    order_number: "#1001",
+    customer_email: "john.doe@example.com",
+    reason: "Defective item",
+    status: "pending",
+    created_at: "2024-01-20T14:30:00Z",
+    items: [{ product_name: "T-shirt", quantity: 1, price: 25 }],
+  },
+  {
+    id: "2",
+    order_number: "#1002",
+    customer_email: "jane.smith@example.com",
+    reason: "Wrong size",
+    status: "approved",
+    created_at: "2024-01-22T10:00:00Z",
+    items: [{ product_name: "Jeans", quantity: 1, price: 60 }],
+  },
+  {
+    id: "3",
+    order_number: "#1003",
+    customer_email: "alice.wang@example.com",
+    reason: "Changed mind",
+    status: "processed",
+    created_at: "2024-01-25T16:45:00Z",
+    items: [{ product_name: "Shoes", quantity: 1, price: 80 }],
+  },
+]
+
+const dashboardMetrics: DashboardMetrics = {
+  totalReturns: 150,
+  pendingReturns: 20,
+  processedReturns: 120,
+  totalRefunded: 5000,
 }
 
 export default function AdminPage() {
-  const [stats, setStats] = useState<DashboardStats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const { user, signOut } = useAuth()
+  const navigate = useNavigate()
+  const { user, loading: authLoading, signOut } = useAuth()
+  const { toast } = useToast()
+  const [loading, setLoading] = useState(false)
+  const [metrics, setMetrics] = useState<DashboardMetrics>(dashboardMetrics)
+  const [returns, setReturns] = useState<ReturnWithDetails[]>(returnsData)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filterStatus, setFilterStatus] = useState<"all" | "pending" | "approved" | "processed">("all")
 
   useEffect(() => {
-    fetchDashboardStats()
-  }, [])
+    if (!user && !authLoading) {
+      navigate("/auth")
+    }
+    loadData()
+  }, [user, authLoading, navigate])
 
-  const fetchDashboardStats = async () => {
+  const loadData = async () => {
+    setLoading(true)
     try {
-      const response = await fetch('/api/analytics/dashboard')
-      if (response.ok) {
-        const data = await response.json()
-        setStats(data)
-      }
+      setMetrics(dashboardMetrics)
+      setReturns(returnsData)
     } catch (error) {
-      console.error('Failed to fetch dashboard stats:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load data",
+        variant: "destructive",
+      })
     } finally {
-      setIsLoading(false)
+      setLoading(false)
     }
   }
 
-  if (isLoading) {
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      navigate("/auth")
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const filteredReturns = returns.filter((item) => {
+    const matchesSearch =
+      item.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      item.customer_email.toLowerCase().includes(searchQuery.toLowerCase())
+
+    const matchesStatus = filterStatus === "all" || item.status === filterStatus
+
+    return matchesSearch && matchesStatus
+  })
+
+  if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="flex items-center space-x-2">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          <span>Loading...</span>
+        </div>
       </div>
     )
   }
 
+  if (!user) {
+    return null
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-            <p className="text-gray-600">Welcome back, {user?.email}</p>
+      {/* Header */}
+      <header className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <RefreshCw className="w-6 h-6 text-gray-500" />
+            <h1 className="text-lg font-semibold text-gray-900">Admin Dashboard</h1>
           </div>
-          <Button onClick={signOut} variant="outline">
-            Sign Out
-          </Button>
+          <div className="flex items-center space-x-4">
+            <Button variant="ghost">
+              <Bell className="w-4 h-4" />
+            </Button>
+            <Button variant="ghost">
+              <Settings className="w-4 h-4" />
+            </Button>
+            <Button onClick={handleSignOut} size="sm">
+              Sign Out
+            </Button>
+          </div>
         </div>
+      </header>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Overview Metrics */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader>
               <CardTitle className="text-sm font-medium">Total Returns</CardTitle>
-              <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.totalReturns || 0}</div>
+              <div className="text-2xl font-bold">{metrics.totalReturns}</div>
+              <div className="text-sm text-green-500 flex items-center">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                +12%
+              </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader>
               <CardTitle className="text-sm font-medium">Pending Returns</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.pendingReturns || 0}</div>
+              <div className="text-2xl font-bold">{metrics.pendingReturns}</div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Merchants</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Processed Returns</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats?.totalMerchants || 0}</div>
+              <div className="text-2xl font-bold">{metrics.processedReturns}</div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardHeader>
+              <CardTitle className="text-sm font-medium">Total Refunded</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${stats?.monthlyRevenue || 0}</div>
+              <div className="text-2xl font-bold">${metrics.totalRefunded}</div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Quick Actions */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks and system management</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-4">
-            <Button>View All Returns</Button>
-            <Button variant="outline">Manage Merchants</Button>
-            <Button variant="outline">System Settings</Button>
-            <Badge variant="secondary">Demo Mode Active</Badge>
-          </CardContent>
-        </Card>
-      </div>
+        {/* Tabs */}
+        <Tabs defaultValue="returns" className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="returns">Returns</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="returns" className="space-y-4">
+            {/* Returns Table */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Input
+                  type="text"
+                  placeholder="Search orders..."
+                  className="max-w-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <Button variant="ghost" className="ml-2">
+                  <Search className="w-4 h-4" />
+                </Button>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Select value={filterStatus} onValueChange={(value: "all" | "pending" | "approved" | "processed") => setFilterStatus(value)}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="processed">Processed</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="outline">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filter
+                </Button>
+              </div>
+            </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredReturns.map((item) => (
+                  <TableRow key={item.id}>
+                    <TableCell className="font-medium">{item.order_number}</TableCell>
+                    <TableCell>{item.customer_email}</TableCell>
+                    <TableCell>{item.reason}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          item.status === "pending"
+                            ? "secondary"
+                            : item.status === "approved"
+                            ? "default"
+                            : "destructive"
+                        }
+                      >
+                        {item.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{new Date(item.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm">View Details</Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-4">
+            {/* Analytics Charts */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Returns Over Time</CardTitle>
+                  <CardDescription>Monthly return trends</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={[
+                      { month: "Jan", returns: 120 },
+                      { month: "Feb", returns: 90 },
+                      { month: "Mar", returns: 110 },
+                      { month: "Apr", returns: 130 },
+                      { month: "May", returns: 100 },
+                    ]}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line type="monotone" dataKey="returns" stroke="#8884d8" activeDot={{ r: 8 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Return Reasons</CardTitle>
+                  <CardDescription>Distribution of return reasons</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: "Defective", value: 40 },
+                          { name: "Wrong Size", value: 30 },
+                          { name: "Changed Mind", value: 20 },
+                          { name: "Other", value: 10 },
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        {[
+                          { name: "Defective", value: 40 },
+                          { name: "Wrong Size", value: 30 },
+                          { name: "Changed Mind", value: 20 },
+                          { name: "Other", value: 10 },
+                        ].map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <CardTitle>Settings</CardTitle>
+                <CardDescription>Manage your store settings</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Alert>
+                  <AlertDescription>
+                    This is a demo store. Settings are not editable.
+                  </AlertDescription>
+                </Alert>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </main>
     </div>
   )
 }
