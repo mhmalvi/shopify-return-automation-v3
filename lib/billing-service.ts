@@ -122,8 +122,8 @@ export class BillingService {
         plan_type: planId,
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
-        current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-        current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+        current_period_start: new Date(subscription.currentPeriodStart * 1000).toISOString(),
+        current_period_end: new Date(subscription.currentPeriodEnd * 1000).toISOString(),
         usage_count: 0,
       })
 
@@ -218,8 +218,8 @@ export class BillingService {
       await this.supabase
         .from("billing_records")
         .update({
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(subscription.current_period_end * 1000).toISOString(),
+          current_period_start: new Date(subscription.currentPeriodStart * 1000).toISOString(),
+          current_period_end: new Date(subscription.currentPeriodEnd * 1000).toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq("merchant_id", merchant.id)
