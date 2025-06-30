@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -262,7 +263,7 @@ export default function AdminPage() {
               </div>
 
               <div className="flex items-center space-x-2">
-                <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <Select value={filterStatus} onValueChange={(value: "all" | "pending" | "approved" | "processed") => setFilterStatus(value)}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
@@ -303,7 +304,7 @@ export default function AdminPage() {
                           item.status === "pending"
                             ? "secondary"
                             : item.status === "approved"
-                            ? "success"
+                            ? "default"
                             : "destructive"
                         }
                       >
@@ -365,7 +366,7 @@ export default function AdminPage() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"

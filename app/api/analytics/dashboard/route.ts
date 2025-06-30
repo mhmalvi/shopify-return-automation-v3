@@ -1,3 +1,4 @@
+
 import { type NextRequest, NextResponse } from "next/server"
 import { dataService } from "@/lib/data-service"
 
@@ -7,7 +8,7 @@ export async function GET(request: NextRequest) {
     const merchantId = searchParams.get("merchant_id") || "550e8400-e29b-41d4-a716-446655440000"
 
     // Get dashboard metrics using the data service
-    const metrics = await dataService.getDashboardMetrics(merchantId)
+    const metrics = await dataService.getDashboardMetrics()
 
     return NextResponse.json({ metrics })
   } catch (error) {

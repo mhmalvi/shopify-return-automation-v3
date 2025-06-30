@@ -33,5 +33,27 @@ export const dataService = {
   
   async getReturns(): Promise<ReturnWithDetails[]> {
     return []
+  },
+
+  async getMerchant(merchantId: string): Promise<any> {
+    // Mock implementation
+    return {
+      id: merchantId,
+      shop_domain: "demo-store",
+      access_token: "demo-token",
+      plan_type: "starter",
+      settings: {}
+    }
+  },
+
+  async getMerchantByDomain(domain: string): Promise<any> {
+    // Mock implementation
+    return {
+      id: "550e8400-e29b-41d4-a716-446655440000",
+      shop_domain: domain,
+      access_token: "demo-token",
+      plan_type: "starter",
+      settings: {}
+    }
   }
 }

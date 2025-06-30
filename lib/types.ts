@@ -79,6 +79,8 @@ export interface Return {
   items: ReturnItem[]
   created_at: string
   updated_at: string
+  shopify_order_id: string
+  total_amount: number
 }
 
 export interface ReturnItem {
