@@ -1,3 +1,4 @@
+
 import { type NextRequest, NextResponse } from "next/server"
 import { createServerClient } from "@/lib/supabase"
 import { verifyShopifyWebhook } from "@/lib/shopify-service"
@@ -117,7 +118,7 @@ async function handleRefundCreated(refundData: any, merchantId: string, supabase
       })
       .in(
         "id",
-        returns.map((r) => r.id),
+        returns.map((returnItem: { id: string }) => returnItem.id),
       )
 
     // Log analytics event
@@ -128,7 +129,7 @@ async function handleRefundCreated(refundData: any, merchantId: string, supabase
         refund_id: refundData.id,
         order_id: refundData.order_id,
         amount: refundData.amount,
-        return_ids: returns.map((r) => r.id),
+        return_ids: returns.map((returnItem: { id: string }) => returnItem.id),
       },
     })
   }
