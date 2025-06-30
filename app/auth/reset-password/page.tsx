@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -28,7 +29,7 @@ export default function ResetPasswordPage() {
   const token = searchParams.get("token")
   const type = searchParams.get("type")
 
-  const handleRequestReset = async (e) => {
+  const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
@@ -46,7 +47,7 @@ export default function ResetPasswordPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
         variant: "destructive",
       })
     } finally {
@@ -54,7 +55,7 @@ export default function ResetPasswordPage() {
     }
   }
 
-  const handlePasswordReset = async (e) => {
+  const handlePasswordReset = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (formData.password !== formData.confirmPassword) {
@@ -94,7 +95,7 @@ export default function ResetPasswordPage() {
     } catch (error) {
       toast({
         title: "Error",
-        description: error.message,
+        description: error instanceof Error ? error.message : "An unexpected error occurred",
         variant: "destructive",
       })
     } finally {
