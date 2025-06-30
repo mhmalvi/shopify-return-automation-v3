@@ -4,7 +4,7 @@ import { createServerClient } from "./supabase"
 import type { Merchant } from "./types"
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-06-20",
+  apiVersion: "2024-11-20.acacia",
 })
 
 export interface SubscriptionPlan {
