@@ -1,7 +1,8 @@
+
 import { createClient } from "@supabase/supabase-js"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = "https://pvadajelvewdazwmvppk.supabase.co"
+const supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB2YWRhamVsdmV3ZGF6d212cHBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTEyMzI3NjMsImV4cCI6MjA2NjgwODc2M30.soX5LLfb_UxpyPuWNEYRTyQTFWjhfaNCVjIY8x_0HWA"
 
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error("Missing Supabase environment variables")
@@ -36,6 +37,17 @@ export const supabase = (() => {
   }
   return clientInstance
 })()
+
+// Export for server-side usage
+export const createServerClient = () => {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  })
+}
 
 // Database types
 export interface Database {

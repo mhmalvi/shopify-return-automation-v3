@@ -5,10 +5,10 @@ import { AuthProvider } from '@/lib/auth-context'
 import { Toaster } from '@/components/ui/toaster'
 
 // Import pages
-import HomePage from '@/pages/HomePage'
-import AuthPage from '@/pages/AuthPage'
-import AdminPage from '@/pages/AdminPage'
-import ReturnsPage from '@/pages/ReturnsPage'
+import HomePage from './pages/HomePage'
+import AuthPage from './pages/AuthPage'
+import AdminPage from './pages/AdminPage'
+import ReturnsPage from './pages/ReturnsPage'
 
 function App() {
   return (
